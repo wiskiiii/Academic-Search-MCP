@@ -5,7 +5,7 @@ A combined stdio MCP server for Google Scholar and Semantic Scholar.
 ## Requirements
 
 - Python managed through `uv`
-- `SERPAPI_API_KEY` for Google Scholar via SerpApi
+- `SERPAPI_API_KEY` for Google Scholar via [SerpApi](https://serpapi.com/)
 - Optional `SEMANTIC_SCHOLAR_API_KEY` for higher Semantic Scholar rate limits
 
 ## Local development
@@ -16,17 +16,14 @@ uv run scholar-mcp
 
 ## Environment variables
 
-- `SERPAPI_API_KEY`: required for Google Scholar via SerpApi
+- `SERPAPI_API_KEY`: required for Google Scholar via [SerpApi](https://serpapi.com/)
 - `SEMANTIC_SCHOLAR_API_KEY`: optional, increases Semantic Scholar rate limits
 
-## Legacy scripts
-
-The original standalone scripts are kept under `archive/` for reference during migration.
 
 ## Run from git
 
 ```bash
-uvx --from git+https://github.com/<owner>/<repo> scholar-mcp
+uvx --from git+https://github.com/wiskiiii/Academic-Search-MCP.git scholar-mcp
 ```
 
 ## Claude Code MCP config
@@ -38,7 +35,7 @@ uvx --from git+https://github.com/<owner>/<repo> scholar-mcp
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/<owner>/<repo>",
+        "git+https://github.com/wiskiiii/Academic-Search-MCP.git",
         "scholar-mcp"
       ],
       "env": {
