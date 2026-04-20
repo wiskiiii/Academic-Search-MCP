@@ -51,16 +51,16 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
 
         formatted_results = []
         for item in items:
-            title = item.get("title", "No Title")
-            paper_id = item.get("paperId", "")
-            year = item.get("year", "N/A")
-            citations = item.get("citationCount", 0)
-            url_link = item.get("url", "")
-            authors = item.get("authors", [])
-            author_names = ", ".join(a.get("name", "") for a in authors[:3])
+            title = item.get("title") or "No Title"
+            paper_id = item.get("paperId") or ""
+            year = item.get("year") or "N/A"
+            citations = item.get("citationCount") or 0
+            url_link = item.get("url") or ""
+            authors = item.get("authors") or []
+            author_names = ", ".join((a.get("name") or "") for a in authors[:3])
             if len(authors) > 3:
                 author_names += f" et al. ({len(authors)} authors)"
-            abstract = item.get("abstract", "")
+            abstract = item.get("abstract") or ""
             abstract_preview = abstract[:200] + "..." if len(abstract) > 200 else abstract
 
             formatted_results.append(
@@ -126,6 +126,20 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
                 )
                 response.raise_for_status()
                 data = response.json()
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code != 429:
+                    return f"Error searching paper: {e}"
+                try:
+                    fallback_response = await client.get(
+                        "https://api.semanticscholar.org/graph/v1/paper/search",
+                        params={"query": title, "limit": 1, "fields": "paperId,title,authors,year,citationStyles"},
+                        headers=_build_headers(),
+                        timeout=30.0,
+                    )
+                    fallback_response.raise_for_status()
+                    data = fallback_response.json()
+                except Exception as fallback_error:
+                    return f"Error searching paper: {fallback_error}"
             except Exception as e:
                 return f"Error searching paper: {e}"
 
@@ -134,8 +148,9 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
             return "No matching paper found."
 
         paper = items[0]
-        author_names = ", ".join(a.get("name", "") for a in paper.get("authors", []))
-        bibtex = paper.get("citationStyles", {}).get("bibtex", "BibTeX not available")
+        authors = paper.get("authors") or []
+        author_names = ", ".join((a.get("name") or "") for a in authors)
+        bibtex = (paper.get("citationStyles") or {}).get("bibtex", "BibTeX not available")
         return "\n".join(
             [
                 f"Found: {paper.get('title', '')}",
