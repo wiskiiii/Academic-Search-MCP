@@ -1,0 +1,15 @@
+README.md
+pyproject.toml
+src/scholar_mcp/__init__.py
+src/scholar_mcp/__main__.py
+src/scholar_mcp/config.py
+src/scholar_mcp/server.py
+src/scholar_mcp.egg-info/PKG-INFO
+src/scholar_mcp.egg-info/SOURCES.txt
+src/scholar_mcp.egg-info/dependency_links.txt
+src/scholar_mcp.egg-info/entry_points.txt
+src/scholar_mcp.egg-info/requires.txt
+src/scholar_mcp.egg-info/top_level.txt
+src/scholar_mcp/tools/__init__.py
+src/scholar_mcp/tools/google_scholar.py
+src/scholar_mcp/tools/semantic_scholar.py

@@ -1,0 +1,2 @@
+[console_scripts]
+scholar-mcp = scholar_mcp.__main__:main
