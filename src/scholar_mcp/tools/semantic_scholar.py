@@ -23,12 +23,14 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
     async def search_papers(
         query: str,
         limit: int = 5,
+        offset: int = 0,
         fields: str = "title,authors,year,citationCount,abstract,url,paperId",
     ) -> str:
-        """Search for academic papers on Semantic Scholar."""
+        """Search for academic papers on Semantic Scholar. Use offset to paginate through results."""
         params = {
             "query": query,
             "limit": min(limit, 100),
+            "offset": offset,
             "fields": fields,
         }
 
@@ -78,7 +80,18 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
                 )
             )
 
-        return "\n".join(formatted_results)
+        response_text = "\n".join(formatted_results)
+
+        next_offset = data.get("next")
+        total = data.get("total", 0)
+
+        pagination_info = f"\n[Pagination] Showing {len(items)} of {total} total results."
+        if next_offset is not None:
+            pagination_info += f" To see the next page, call this tool again with offset={next_offset}."
+        else:
+            pagination_info += " No more results."
+
+        return response_text + pagination_info
 
     @mcp.tool()
     async def get_paper_bibtex(paper_id: str) -> str:
