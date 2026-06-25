@@ -174,3 +174,148 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
                 f"BibTeX:\n{bibtex}",
             ]
         )
+
+    def _format_paper_details(item: dict) -> str:
+        title = item.get("title") or "No Title"
+        paper_id = item.get("paperId") or ""
+        year = item.get("year") or "N/A"
+        citations = item.get("citationCount") or 0
+        url_link = item.get("url") or ""
+        authors = item.get("authors") or []
+        author_names = ", ".join((a.get("name") or "") for a in authors[:3])
+        if len(authors) > 3:
+            author_names += f" et al. ({len(authors)} authors)"
+        abstract = item.get("abstract") or ""
+        abstract_preview = abstract[:200] + "..." if len(abstract) > 200 else abstract
+        tldr = (item.get("tldr") or {}).get("text", "")
+
+        lines = [
+            f"Title: {title}",
+            f"Authors: {author_names}",
+            f"Year: {year}",
+            f"Citations: {citations}",
+            f"Paper ID: {paper_id}",
+            f"URL: {url_link}",
+        ]
+        if tldr:
+            lines.append(f"TLDR: {tldr}")
+        lines.append(f"Abstract: {abstract_preview}")
+        lines.append("---")
+        return "\n".join(lines)
+
+    @mcp.tool()
+    async def get_paper_recommendations(
+        positive_paper_ids: list[str],
+        negative_paper_ids: list[str] = None,
+        limit: int = 10,
+    ) -> str:
+        """Get recommended papers based on positive and negative seed paper IDs."""
+        data = {"positivePaperIds": positive_paper_ids, "negativePaperIds": negative_paper_ids or []}
+        params = {"fields": "title,authors,year,citationCount,abstract,url,paperId,tldr", "limit": min(limit, 500)}
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            try:
+                response = await client.post("https://api.semanticscholar.org/recommendations/v1/papers", json=data, params=params, headers=_build_headers(), timeout=30.0)
+                response.raise_for_status()
+                items = response.json().get("recommendedPapers", [])
+            except Exception as e:
+                return f"Error getting recommendations: {e}"
+        if not items:
+            return "No recommendations found."
+        return "\n".join(_format_paper_details(item) for item in items)
+
+    @mcp.tool()
+    async def get_paper_citations(paper_id: str, limit: int = 10, offset: int = 0) -> str:
+        """Get papers that cite the given paper ID."""
+        params = {"fields": "title,authors,year,citationCount,abstract,url,paperId,tldr", "limit": min(limit, 100), "offset": offset}
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            try:
+                response = await client.get(f"https://api.semanticscholar.org/graph/v1/paper/{paper_id}/citations", params=params, headers=_build_headers(), timeout=30.0)
+                response.raise_for_status()
+                data = response.json()
+            except Exception as e:
+                return f"Error getting citations: {e}"
+        items = [item.get("citingPaper", {}) for item in data.get("data", [])]
+        if not items:
+            return "No citations found."
+        res = "\n".join(_format_paper_details(item) for item in items if item)
+        next_offset = data.get("next")
+        if next_offset is not None:
+            res += f"\n[Pagination] To see the next page, call this tool again with offset={next_offset}."
+        return res
+
+    @mcp.tool()
+    async def get_paper_references(paper_id: str, limit: int = 10, offset: int = 0) -> str:
+        """Get papers that are referenced by the given paper ID."""
+        params = {"fields": "title,authors,year,citationCount,abstract,url,paperId,tldr", "limit": min(limit, 100), "offset": offset}
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            try:
+                response = await client.get(f"https://api.semanticscholar.org/graph/v1/paper/{paper_id}/references", params=params, headers=_build_headers(), timeout=30.0)
+                response.raise_for_status()
+                data = response.json()
+            except Exception as e:
+                return f"Error getting references: {e}"
+        items = [item.get("citedPaper", {}) for item in data.get("data", [])]
+        if not items:
+            return "No references found."
+        res = "\n".join(_format_paper_details(item) for item in items if item)
+        next_offset = data.get("next")
+        if next_offset is not None:
+            res += f"\n[Pagination] To see the next page, call this tool again with offset={next_offset}."
+        return res
+
+    @mcp.tool()
+    async def get_paper_details(paper_id: str) -> str:
+        """Get full details of a specific paper by its ID, including TLDR and openAccessPdf."""
+        params = {"fields": "title,authors,year,citationCount,abstract,url,paperId,tldr,openAccessPdf"}
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            try:
+                response = await client.get(f"https://api.semanticscholar.org/graph/v1/paper/{paper_id}", params=params, headers=_build_headers(), timeout=30.0)
+                response.raise_for_status()
+                item = response.json()
+            except Exception as e:
+                return f"Error getting paper details: {e}"
+        pdf = item.get("openAccessPdf")
+        pdf_url = pdf.get("url") if pdf else "Not available"
+        res = _format_paper_details(item)
+        res += f"\nOpen Access PDF: {pdf_url}"
+        return res
+
+    @mcp.tool()
+    async def search_author(query: str, limit: int = 5, offset: int = 0) -> str:
+        """Search for authors by name."""
+        params = {"query": query, "fields": "name,url,paperCount,hIndex,citationCount", "limit": min(limit, 100), "offset": offset}
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            try:
+                response = await client.get("https://api.semanticscholar.org/graph/v1/author/search", params=params, headers=_build_headers(), timeout=30.0)
+                response.raise_for_status()
+                data = response.json()
+            except Exception as e:
+                return f"Error searching author: {e}"
+        items = data.get("data", [])
+        if not items:
+            return "No authors found."
+        formatted = []
+        for a in items:
+            formatted.append(f"Name: {a.get('name')}\nAuthor ID: {a.get('authorId')}\nH-Index: {a.get('hIndex')}\nPaper Count: {a.get('paperCount')}\nCitations: {a.get('citationCount')}\nURL: {a.get('url')}\n---")
+        res = "\n".join(formatted)
+        next_offset = data.get("next")
+        if next_offset is not None:
+            res += f"\n[Pagination] To see the next page, call this tool again with offset={next_offset}."
+        return res
+
+    @mcp.tool()
+    async def get_author_details(author_id: str) -> str:
+        """Get details about an author, including their papers."""
+        params = {"fields": "name,url,paperCount,hIndex,citationCount,papers.title,papers.year,papers.citationCount,papers.paperId"}
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            try:
+                response = await client.get(f"https://api.semanticscholar.org/graph/v1/author/{author_id}", params=params, headers=_build_headers(), timeout=30.0)
+                response.raise_for_status()
+                data = response.json()
+            except Exception as e:
+                return f"Error getting author details: {e}"
+        res = f"Name: {data.get('name')}\nAuthor ID: {data.get('authorId')}\nH-Index: {data.get('hIndex')}\nPaper Count: {data.get('paperCount')}\nCitations: {data.get('citationCount')}\nURL: {data.get('url')}\n\nPapers:\n"
+        papers = data.get("papers", [])
+        for p in papers:
+            res += f"- {p.get('title')} ({p.get('year')}) | Citations: {p.get('citationCount')} | ID: {p.get('paperId')}\n"
+        return res
