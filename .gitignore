@@ -2,4 +2,3 @@ test/relevance_search_results.json
 test/papers.json
 build/
 __pycache__/
-test/
