@@ -26,7 +26,12 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
         offset: int = 0,
         fields: str = "title,authors,year,citationCount,abstract,url,paperId",
     ) -> str:
-        """Search for academic papers on Semantic Scholar. Use offset to paginate through results."""
+        """
+        Search for academic papers on Semantic Scholar using keywords. 
+        Use this for broad literature queries. 
+        Returns paginated results containing basic metadata: Title, Authors, Year, Citations, Paper ID, URL, and a short Abstract preview. 
+        Use offset to paginate through results.
+        """
         params = {
             "query": query,
             "limit": min(limit, 100),
@@ -95,7 +100,11 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def get_paper_bibtex(paper_id: str) -> str:
-        """Get BibTeX citation for a specific paper."""
+        """
+        Get the exact BibTeX citation for a specific paper by its Semantic Scholar Paper ID. 
+        Use this when you only need to cite a paper you already have the ID for. 
+        Returns a raw BibTeX string.
+        """
         async with httpx.AsyncClient(follow_redirects=True) as client:
             try:
                 response = await client.get(
@@ -117,7 +126,11 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def get_papers_bibtex_batch(paper_ids: list[str], delay: float = 1.0) -> str:
-        """Get BibTeX citations for multiple papers with rate limiting."""
+        """
+        Get BibTeX citations for multiple papers at once. 
+        Use this to format references for multiple papers efficiently. 
+        Returns a list of raw BibTeX strings.
+        """
         results = []
         for index, paper_id in enumerate(paper_ids, start=1):
             if index > 1:
@@ -128,7 +141,11 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def search_paper_by_title(title: str) -> str:
-        """Search for a paper by title match and return its BibTeX."""
+        """
+        Search for a paper by exact title match. 
+        Use this when you know the exact name of a paper and want to quickly retrieve its ID, basic metadata, and BibTeX citation in one call. 
+        Returns Title, Authors, Year, Paper ID, and BibTeX.
+        """
         async with httpx.AsyncClient(follow_redirects=True) as client:
             try:
                 response = await client.get(
@@ -209,7 +226,11 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
         negative_paper_ids: list[str] = None,
         limit: int = 10,
     ) -> str:
-        """Get recommended papers based on positive and negative seed paper IDs."""
+        """
+        Get recommended papers based on a list of positive (and optionally negative) seed Paper IDs. 
+        Use this to discover similar high-quality papers ('snowballing'). 
+        Returns full metadata for each recommended paper, including a concise AI-generated TLDR summary.
+        """
         data = {"positivePaperIds": positive_paper_ids, "negativePaperIds": negative_paper_ids or []}
         params = {"fields": "title,authors,year,citationCount,abstract,url,paperId,tldr", "limit": min(limit, 500)}
         async with httpx.AsyncClient(follow_redirects=True) as client:
@@ -225,7 +246,11 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def get_paper_citations(paper_id: str, limit: int = 10, offset: int = 0) -> str:
-        """Get papers that cite the given paper ID."""
+        """
+        Get a list of papers that cite the given Paper ID (Forward citation tracing). 
+        Use this to see how a specific paper's research has been built upon by others. 
+        Returns paginated full metadata for citing papers, including TLDR summaries.
+        """
         params = {"fields": "title,authors,year,citationCount,abstract,url,paperId,tldr", "limit": min(limit, 100), "offset": offset}
         async with httpx.AsyncClient(follow_redirects=True) as client:
             try:
@@ -245,7 +270,11 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def get_paper_references(paper_id: str, limit: int = 10, offset: int = 0) -> str:
-        """Get papers that are referenced by the given paper ID."""
+        """
+        Get a list of papers that are referenced by the given Paper ID (Backward citation tracing). 
+        Use this to explore the foundational work a specific paper builds on. 
+        Returns paginated full metadata for referenced papers, including TLDR summaries.
+        """
         params = {"fields": "title,authors,year,citationCount,abstract,url,paperId,tldr", "limit": min(limit, 100), "offset": offset}
         async with httpx.AsyncClient(follow_redirects=True) as client:
             try:
@@ -265,7 +294,11 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def get_paper_details(paper_id: str) -> str:
-        """Get full details of a specific paper by its ID, including TLDR and openAccessPdf."""
+        """
+        Get full, in-depth details of a specific paper by its ID. 
+        Use this when you need comprehensive information about a single paper. 
+        Returns complete metadata including a concise AI-generated TLDR summary and an Open Access PDF URL for full-text reading if available.
+        """
         params = {"fields": "title,authors,year,citationCount,abstract,url,paperId,tldr,openAccessPdf"}
         async with httpx.AsyncClient(follow_redirects=True) as client:
             try:
@@ -282,7 +315,11 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def search_author(query: str, limit: int = 5, offset: int = 0) -> str:
-        """Search for authors by name."""
+        """
+        Search for academic authors by name. 
+        Use this to find an author's exact ID and basic metrics. 
+        Returns paginated basic profiles including Name, Author ID, H-Index, Total Paper Count, and Total Citations.
+        """
         params = {"query": query, "fields": "name,url,paperCount,hIndex,citationCount", "limit": min(limit, 100), "offset": offset}
         async with httpx.AsyncClient(follow_redirects=True) as client:
             try:
@@ -305,7 +342,11 @@ def register_semantic_scholar_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def get_author_details(author_id: str) -> str:
-        """Get details about an author, including their papers."""
+        """
+        Get detailed metrics for a specific author and a list of their published papers. 
+        Use this to analyze a researcher's output and expertise. 
+        Returns Name, Author ID, H-Index, Paper Count, Citations, and a list of their papers with titles, years, and citation counts.
+        """
         params = {"fields": "name,url,paperCount,hIndex,citationCount,papers.title,papers.year,papers.citationCount,papers.paperId"}
         async with httpx.AsyncClient(follow_redirects=True) as client:
             try:

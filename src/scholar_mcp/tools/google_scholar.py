@@ -11,6 +11,7 @@ def register_google_scholar_tools(mcp: FastMCP) -> None:
     async def search_google_scholar(query: str, num_results: int = 5) -> str:
         """
         Search Google Scholar for academic papers.
+        USE THIS ONLY AS A FALLBACK if Semantic Scholar search fails or returns insufficient results. Semantic Scholar is the preferred primary search tool.
 
         Args:
             query: The search query.
